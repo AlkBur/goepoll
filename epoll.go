@@ -21,6 +21,8 @@ const (
 	maxWaitEventsBegin = 1024
 )
 
+type Hendler func(r *Received) int
+
 type Bufer interface {
 	Byte() []byte
 	Write([]byte)

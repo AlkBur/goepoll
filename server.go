@@ -55,7 +55,7 @@ func (s *Server) listen(addr string) error {
 	return nil
 }
 
-func (s *Server) Start() error {
+func (s *Server) Start(h Hendler) error {
 	var event unix.EpollEvent
 
 	efd, err := unix.EpollCreate1(0)
@@ -142,7 +142,7 @@ func (s *Server) Start() error {
 				}
 
 				if r.r.Len() > 0 {
-					go ServerHandle(int(events[i].Fd), r)
+					go serverHandle(int(events[i].Fd), r, h)
 				} else {
 					putReceived(r)
 					unix.Close(int(events[i].Fd))
@@ -154,19 +154,21 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func ServerHandle(fd int, r *Received) {
+func serverHandle(fd int, r *Received, h Hendler) {
 	closeConn := true
 	defer func() {
 		putReceived(r)
 		if closeConn {
 			unix.Close(fd)
+			log.Println("Close connect")
 		}
 	}()
 	r.SetSettings()
+	closeConn = !r.isKeepAlive
 
-	log.Println(string(r.Url))
+	//log.Println(string(r.Url))
 
-	b := r.GetAnswer()
+	b := r.GetAnswer(h(r))
 	err := fillSendBuffer(fd, b)
 	if err != nil {
 		closeConn = true

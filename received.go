@@ -3,6 +3,7 @@ package goepoll
 import (
 	"bytes"
 	"log"
+	"net/http"
 	"strconv"
 	"sync"
 )
@@ -18,6 +19,12 @@ var (
 	line404 = []byte("HTTP/1.1 404 Not Found\r\n")
 
 	endHead = []byte("\r\n\r\n")
+)
+
+const (
+	textErrorContent = "Content-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\n\r\n"
+	//textBadRequest      = "HTTP/1.1 400 Bad Request\r\n" + textErrorContent
+	//crlf                = "\r\n"
 )
 
 var receivedPool = sync.Pool{
@@ -59,22 +66,29 @@ func putReceived(r *Received) {
 	r.Url = nil
 }
 
-func (r *Received) GetAnswer() []byte {
-	//
-	r.body.WriteString("{}")
+func (r *Received) GetAnswer(code int) []byte {
+	switch code {
+	case http.StatusBadRequest:
+		r.w.Write(line400)
+		r.w.WriteString(textErrorContent)
+	case http.StatusNotFound:
+		r.w.Write(line404)
+		r.w.WriteString(textErrorContent)
+	default:
+		r.w.Write(line200)
+		r.w.WriteString("Server: goepoll/0.0.1\r\n")
+		r.w.WriteString("Content-Length: ")
+		r.w.WriteString(strconv.Itoa(r.body.Len()))
+		r.w.WriteString("\r\nConnection: ")
+		if r.isKeepAlive {
+			r.w.Write(strKeepAlive)
+		} else {
+			r.w.Write(strClose)
+		}
+		r.w.WriteString("\r\nContent-Type: application/json\r\n\r\n")
+		r.w.Write(r.body.Bytes())
 
-	r.w.Write(line200)
-	r.w.WriteString("Server: goepoll/0.0.1\r\n")
-	r.w.WriteString("Content-Length: ")
-	r.w.WriteString(strconv.Itoa(r.body.Len()))
-	r.w.WriteString("\r\nConnection: ")
-	if r.isKeepAlive {
-		r.w.Write(strKeepAlive)
-	} else {
-		r.w.Write(strClose)
 	}
-	r.w.WriteString("\r\nContent-Type: application/json\r\n\r\n")
-	r.w.Write(r.body.Bytes())
 
 	return r.w.Bytes()
 }
