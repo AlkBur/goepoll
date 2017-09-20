@@ -1,0 +1,5 @@
+go epoll
+
+code example:
+srv, _ := NewServer(":8080")
+srv.Start()
