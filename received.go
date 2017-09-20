@@ -123,3 +123,19 @@ func (r *Received) SetSettings() bool {
 	}
 	return true
 }
+
+func (r *Received) IsGet() bool {
+	return r.isGet
+}
+
+func (r *Received) WriteString(str string) {
+	r.w.WriteString(str)
+}
+
+func (r *Received) Write(p []byte) {
+	r.w.Write(p)
+}
+
+func (r *Received) WriteByte(b byte) {
+	r.w.WriteByte(b)
+}
