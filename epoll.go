@@ -2,7 +2,6 @@ package goepoll
 
 import (
 	"golang.org/x/sys/unix"
-	"log"
 	"syscall"
 )
 
@@ -43,7 +42,7 @@ func fillSendBuffer(fd int, b []byte) (err error) {
 		} else if x <= 0 {
 			return
 		}
-		log.Println("Send", x)
+		//log.Println("Send", x)
 		n += x
 	}
 	return
@@ -64,7 +63,7 @@ func fillReadBuffer(fd int, r *Received) (err error) {
 			return
 		}
 		r.r.Write(r.buf[:x])
-		log.Println("Read", x)
+		//log.Println("Read", x)
 	}
 	return
 }

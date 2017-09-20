@@ -129,13 +129,13 @@ func (r *Received) IsGet() bool {
 }
 
 func (r *Received) WriteString(str string) {
-	r.w.WriteString(str)
+	r.body.WriteString(str)
 }
 
 func (r *Received) Write(p []byte) {
-	r.w.Write(p)
+	r.body.Write(p)
 }
 
 func (r *Received) WriteByte(b byte) {
-	r.w.WriteByte(b)
+	r.body.WriteByte(b)
 }

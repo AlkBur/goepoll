@@ -160,7 +160,7 @@ func serverHandle(fd int, r *Received, h Hendler) {
 		putReceived(r)
 		if closeConn {
 			unix.Close(fd)
-			log.Println("Close connect")
+			//log.Println("Close connect")
 		}
 	}()
 	r.SetSettings()
