@@ -14,15 +14,15 @@ var (
 	strClose     = []byte("close")
 	strKeepAlive = []byte("keep-alive")
 
-	line200 = []byte("HTTP/1.1 200 OK\r\n")
-	line400 = []byte("HTTP/1.1 400 Bad Request\r\n")
-	line404 = []byte("HTTP/1.1 404 Not Found\r\n")
+	line200 = []byte("HTTP/1.1 200 OK")
+	line400 = []byte("HTTP/1.1 400 Bad Request")
+	line404 = []byte("HTTP/1.1 404 Not Found")
 
 	endHead = []byte("\r\n\r\n")
 )
 
 const (
-	textErrorContent = "Content-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\n\r\n"
+	textErrorContent = "\r\nContent-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff"
 	//textBadRequest      = "HTTP/1.1 400 Bad Request\r\n" + textErrorContent
 	//crlf                = "\r\n"
 )
@@ -71,13 +71,18 @@ func (r *Received) GetAnswer(code int) []byte {
 	case http.StatusBadRequest:
 		r.w.Write(line400)
 		r.w.WriteString(textErrorContent)
+		r.w.Write(endHead)
 	case http.StatusNotFound:
 		r.w.Write(line404)
 		r.w.WriteString(textErrorContent)
+		r.w.Write(endHead)
 	default:
 		r.w.Write(line200)
-		r.w.WriteString("Server: goepoll/0.0.1\r\n")
-		r.w.WriteString("Content-Length: ")
+		r.w.WriteString("\r\nServer: goepoll/0.0.1")
+		r.w.WriteString("\r\nContent-Type: application/json; charset=utf-8")
+		r.w.WriteString("\r\nContent-Language: ru")
+
+		r.w.WriteString("\r\nContent-Length: ")
 		r.w.WriteString(strconv.Itoa(r.body.Len()))
 		r.w.WriteString("\r\nConnection: ")
 		if r.isKeepAlive {
@@ -85,7 +90,8 @@ func (r *Received) GetAnswer(code int) []byte {
 		} else {
 			r.w.Write(strClose)
 		}
-		r.w.WriteString("\r\nContent-Type: application/json\r\n\r\n")
+
+		r.w.Write(endHead)
 		r.w.Write(r.body.Bytes())
 
 	}
