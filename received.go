@@ -112,7 +112,11 @@ func (r *Received) SetSettings() bool {
 
 	i = bytes.IndexByte(b[:i], '\r')
 	if i > 0 {
-		r.Url = b[4:i]
+		if r.isGet {
+			r.Url = b[4:i]
+		} else {
+			r.Url = b[5:i]
+		}
 		//log.Println("get host:", string(b))
 		i = bytes.IndexByte(r.Url, ' ')
 		if i > 0 {

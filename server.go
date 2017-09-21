@@ -12,6 +12,7 @@ import (
 type Server struct {
 	timeout  int
 	listenfd int
+	efd      int
 }
 
 func NewServer(addr string) (*Server, error) {
@@ -60,19 +61,20 @@ func (s *Server) listen(addr string) error {
 }
 
 func (s *Server) Start(h Hendler) error {
+	var err error
 	var event unix.EpollEvent
 	defer unix.Close(s.listenfd)
 
-	efd, err := unix.EpollCreate1(0)
+	s.efd, err = unix.EpollCreate1(0)
 	if err != nil {
 		return err
 	}
-	defer unix.Close(efd)
+	defer unix.Close(s.efd)
 
 	event.Fd = int32(s.listenfd)
 	event.Events = EPOLLIN | EPOLLET
 
-	err = unix.EpollCtl(efd, unix.EPOLL_CTL_ADD, s.listenfd, &event)
+	err = unix.EpollCtl(s.efd, unix.EPOLL_CTL_ADD, s.listenfd, &event)
 	if err != nil {
 		return err
 	}
@@ -83,18 +85,28 @@ func (s *Server) Start(h Hendler) error {
 	var gracefulStop = make(chan os.Signal)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
-	go func() {
+	go func(s *Server) {
 		sig := <-gracefulStop
+
+		err = unix.Close(s.efd)
+		if err != nil {
+			log.Println("Error close efd:", err)
+		}
+		err = unix.Close(s.listenfd)
+		if err != nil {
+			log.Println("Error close socket:", err)
+		}
+
 		log.Printf("caught sig: %+v", sig)
 		log.Println("Wait for 2 second to finish processing")
 		time.Sleep(2 * time.Second)
 		os.Exit(0)
-	}()
+	}(s)
 
 	/* The event loop */
 	var i, n int
 	for {
-		n, err = unix.EpollWait(efd, events, s.timeout)
+		n, err = unix.EpollWait(s.efd, events, s.timeout)
 		if err != nil {
 			if temporaryErr(err) {
 				continue
@@ -130,7 +142,7 @@ func (s *Server) Start(h Hendler) error {
 
 					event.Fd = int32(infd)
 					event.Events = EPOLLIN | EPOLLET
-					err = unix.EpollCtl(efd, unix.EPOLL_CTL_ADD, infd, &event)
+					err = unix.EpollCtl(s.efd, unix.EPOLL_CTL_ADD, infd, &event)
 					if err != nil {
 						log.Println("Error wait EpollCtl:", err)
 					}
@@ -191,4 +203,10 @@ func serverHandle(fd int, r *Received, h Hendler) {
 	if err != nil {
 		closeConn = true
 	}
+}
+
+func (s *Server) Close() {
+	log.Println("GoEpoll close")
+	unix.Close(s.efd)
+	unix.Close(s.listenfd)
 }
