@@ -3,6 +3,10 @@ package goepoll
 import (
 	"golang.org/x/sys/unix"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 type Server struct {
@@ -57,11 +61,13 @@ func (s *Server) listen(addr string) error {
 
 func (s *Server) Start(h Hendler) error {
 	var event unix.EpollEvent
+	defer unix.Close(s.listenfd)
 
 	efd, err := unix.EpollCreate1(0)
 	if err != nil {
 		return err
 	}
+	defer unix.Close(efd)
 
 	event.Fd = int32(s.listenfd)
 	event.Events = EPOLLIN | EPOLLET
@@ -72,6 +78,18 @@ func (s *Server) Start(h Hendler) error {
 	}
 
 	events := make([]unix.EpollEvent, maxWaitEventsBegin)
+
+	//graceful shutdown
+	var gracefulStop = make(chan os.Signal)
+	signal.Notify(gracefulStop, syscall.SIGTERM)
+	signal.Notify(gracefulStop, syscall.SIGINT)
+	go func() {
+		sig := <-gracefulStop
+		log.Printf("caught sig: %+v", sig)
+		log.Println("Wait for 2 second to finish processing")
+		time.Sleep(2 * time.Second)
+		os.Exit(0)
+	}()
 
 	/* The event loop */
 	var i, n int

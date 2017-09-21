@@ -2,6 +2,8 @@ package goepoll
 
 import (
 	"golang.org/x/sys/unix"
+	"log"
+	"os"
 	"syscall"
 )
 
@@ -26,6 +28,11 @@ type Bufer interface {
 	Byte() []byte
 	Write([]byte)
 	GetAnswer() []byte
+}
+
+func init() {
+	log.SetPrefix("GoEpoll: ")
+	log.SetOutput(os.Stderr)
 }
 
 func fillSendBuffer(fd int, b []byte) (err error) {
